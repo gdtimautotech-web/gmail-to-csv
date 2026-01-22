@@ -10,19 +10,18 @@ import smtplib
 from email.message import EmailMessage
 from datetime import datetime
 
-# --- CONFIGURAZIONE DALLE VARIABILI D'AMBIENTE ---
+# --- CONFIGURAZIONE tramite GitHub Secrets ---
 EMAIL = os.environ.get("EMAIL")
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
+WORKDIR = "/tmp/workdir"  # cartella temporanea su runner
 ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
-SEND_TO = os.environ.get("SEND_TO")
-WORKDIR = os.environ.get("WORKDIR", "./workdir")  # default se non impostata
-CHECK_LAST = 5  # Controlla le ultime 5 mail
+CHECK_LAST = 5
+SEND_TO = os.environ.get("SEND_TO", EMAIL)  # default a se stesso
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # --- FUNZIONI ---
 def pulisci_cartella(path):
-    """Svuota la cartella di lavoro"""
     if os.path.exists(path):
         for f in os.listdir(path):
             os.remove(os.path.join(path, f))
@@ -30,12 +29,10 @@ def pulisci_cartella(path):
         os.makedirs(path)
 
 def estrai_zip(file_path, dest_folder, password):
-    """Estrae file 7z protetto da password"""
     with py7zr.SevenZipFile(file_path, mode='r', password=password) as archive:
         archive.extractall(path=dest_folder)
 
 def invia_email(to_address, files):
-    """Invia i CSV come allegati via SMTP"""
     msg = EmailMessage()
     msg['From'] = EMAIL
     msg['To'] = to_address
@@ -47,7 +44,6 @@ def invia_email(to_address, files):
             data = fp.read()
         msg.add_attachment(data, maintype='text', subtype='csv', filename=f)
 
-    # Gmail SMTP
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(EMAIL, APP_PASSWORD)
         smtp.send_message(msg)
@@ -63,7 +59,7 @@ def main():
     mail.select("inbox")
 
     typ, msgs = mail.search(None, "ALL")
-    msgs = msgs[0].split()[::-1]  # Mail più recenti prima
+    msgs = msgs[0].split()[::-1]
 
     allegato_7z = None
 
@@ -73,15 +69,12 @@ def main():
 
         logging.info(f"Controllando mail: {msg.get('subject')}")
         for part in msg.walk():
-            if part.get_filename():
-                logging.info(f"  Allegato trovato: {part.get_filename()}")
-                # Cerca solo "LEAD 119" nel nome e estensione .7z
-                if "LEAD 119" in part.get_filename() and part.get_filename().endswith(".7z"):
-                    allegato_7z = os.path.join(WORKDIR, part.get_filename())
-                    with open(allegato_7z, 'wb') as f:
-                        f.write(part.get_payload(decode=True))
-                    logging.info(f"  Allegato 7z salvato: {part.get_filename()}")
-                    break
+            if part.get_filename() and "LEAD 119" in part.get_filename() and part.get_filename().endswith(".7z"):
+                allegato_7z = os.path.join(WORKDIR, part.get_filename())
+                with open(allegato_7z, 'wb') as f:
+                    f.write(part.get_payload(decode=True))
+                logging.info(f"Allegato 7z salvato: {part.get_filename()}")
+                break
         if allegato_7z:
             break
 
