@@ -13,10 +13,10 @@ from datetime import datetime
 # --- CONFIGURAZIONE tramite GitHub Secrets ---
 EMAIL = os.environ.get("EMAIL")
 APP_PASSWORD = os.environ.get("APP_PASSWORD")
-WORKDIR = "/tmp/workdir"  # cartella temporanea su runner
+WORKDIR = "/tmp/workdir"  # cartella temporanea del runner
 ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD")
 CHECK_LAST = 5
-SEND_TO = os.environ.get("SEND_TO", EMAIL)  # default a se stesso
+SEND_TO = os.environ.get("SEND_TO", EMAIL)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
