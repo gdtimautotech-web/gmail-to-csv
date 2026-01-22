@@ -1,0 +1,33 @@
+name: Test Gmail CSV Script
+
+on:
+  workflow_dispatch:  # permette di eseguire il workflow manualmente
+
+jobs:
+  test-gmail:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install py7zr pandas
+
+    - name: Run Gmail script
+      env:
+        EMAIL: ${{ secrets.EMAIL }}
+        APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+        ZIP_PASSWORD: ${{ secrets.ZIP_PASSWORD }}
+        SEND_TO: ${{ secrets.SEND_TO }}
+        WORKDIR: "./workdir"
+      run: |
+        mkdir -p $WORKDIR
+        python gmail_extract_and_forward.py
